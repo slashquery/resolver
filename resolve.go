@@ -14,7 +14,7 @@ type Answer struct {
 }
 
 // Resolve return IPv4 ips
-func (r *Resolver) Resolve(host string) ([]string, error) {
+func (r *Resolver) Resolve(host string) (*Answer, error) {
 	c := dns.Client{
 		Timeout: time.Duration(r.timeout) * time.Second,
 	}
@@ -51,6 +51,10 @@ func (r *Resolver) Resolve(host string) ([]string, error) {
 		}
 	}
 	dnsAnswer.TTL = dnsAnswer.TTL / uint32(len(dnsAnswer.Addresses))
-	fmt.Printf("dnsAnswer = %+v\n", dnsAnswer)
-	return nil, nil
+
+	if len(dnsAnswer.Addresses) == 0 {
+		return nil, fmt.Errorf("No addresses found\n")
+	}
+
+	return &dnsAnswer, nil
 }
