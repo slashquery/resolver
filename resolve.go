@@ -8,6 +8,11 @@ import (
 	"github.com/miekg/dns"
 )
 
+type Answer struct {
+	Addresses []string
+	TTL       uint32
+}
+
 // Resolve return IPv4 ips
 func (r *Resolver) Resolve(host string) ([]string, error) {
 	c := dns.Client{
@@ -37,16 +42,15 @@ func (r *Resolver) Resolve(host string) ([]string, error) {
 		return nil, fmt.Errorf("Could not found public IP\n")
 	}
 
-	var IPs []string
+	dnsAnswer := Answer{}
 	for _, ans := range in.Answer {
 		if a, ok := ans.(*dns.A); ok {
-			IPs = append(IPs, a.A.String())
+			dnsAnswer.Addresses = append(dnsAnswer.Addresses, a.A.String())
+			// get the average TTL
+			dnsAnswer.TTL = dnsAnswer.TTL + ans.Header().Ttl
 		}
 	}
-	return IPs, nil
-}
-
-// getTTL
-func (r *Resolver) getTTL(answer dns.RR) time.Duration {
-	return time.Duration(answer.Header().Ttl) * time.Second
+	dnsAnswer.TTL = dnsAnswer.TTL / uint32(len(dnsAnswer.Addresses))
+	fmt.Printf("dnsAnswer = %+v\n", dnsAnswer)
+	return nil, nil
 }
