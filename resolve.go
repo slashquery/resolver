@@ -24,6 +24,8 @@ func (r *Resolver) Resolve(host string) (*Answer, error) {
 			TTL:       31557600,
 		}, nil
 	}
+
+	// start DNS client
 	c := dns.Client{
 		Timeout: time.Duration(r.timeout) * time.Second,
 	}
