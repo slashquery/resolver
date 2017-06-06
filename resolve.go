@@ -3,6 +3,7 @@ package resolver
 import (
 	"fmt"
 	"log"
+	"net"
 	"time"
 
 	"github.com/miekg/dns"
@@ -15,6 +16,14 @@ type Answer struct {
 
 // Resolve return IPv4 ips
 func (r *Resolver) Resolve(host string) (*Answer, error) {
+	// if host and IP don't resolve and set TTL to 1 year
+	addr := net.ParseIP(host)
+	if addr != nil {
+		return Addresses{
+			Addresses: addr,
+			TTL:       31557600,
+		}
+	}
 	c := dns.Client{
 		Timeout: time.Duration(r.timeout) * time.Second,
 	}
