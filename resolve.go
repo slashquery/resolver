@@ -19,10 +19,10 @@ func (r *Resolver) Resolve(host string) (*Answer, error) {
 	// if host and IP don't resolve and set TTL to 1 year
 	addr := net.ParseIP(host)
 	if addr != nil {
-		return Addresses{
-			Addresses: addr,
+		return &Answer{
+			Addresses: []string{addr.String()},
 			TTL:       31557600,
-		}
+		}, nil
 	}
 	c := dns.Client{
 		Timeout: time.Duration(r.timeout) * time.Second,
