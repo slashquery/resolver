@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/miekg/dns"
@@ -17,10 +18,7 @@ type Answer struct {
 // Resolve return IPv4 ips
 func (r *Resolver) Resolve(host string) (*Answer, error) {
 	// if host is an IP don't, resolve and set TTL to 1 year
-	h, _, err := net.SplitHostPort(host)
-	if err != nil {
-		return nil, err
-	}
+	h := strings.Split(host, ":")[0]
 	addr := net.ParseIP(h)
 	if addr != nil {
 		return &Answer{
