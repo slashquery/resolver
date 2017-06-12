@@ -17,7 +17,7 @@ type Answer struct {
 // Resolve return IPv4 ips
 func (r *Resolver) Resolve(host string) (*Answer, error) {
 	// if host is an IP don't, resolve and set TTL to 1 year
-	h, _, err := new.SplitHostPort(host)
+	h, _, err := net.SplitHostPort(host)
 	if err != nil {
 		return nil, err
 	}
