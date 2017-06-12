@@ -16,8 +16,12 @@ type Answer struct {
 
 // Resolve return IPv4 ips
 func (r *Resolver) Resolve(host string) (*Answer, error) {
-	// if host and IP don't resolve and set TTL to 1 year
-	addr := net.ParseIP(host)
+	// if host is an IP don't, resolve and set TTL to 1 year
+	h, _, err := new.SplitHostPort(host)
+	if err != nil {
+		return nil, err
+	}
+	addr := net.ParseIP(h)
 	if addr != nil {
 		return &Answer{
 			Addresses: []string{addr.String()},
