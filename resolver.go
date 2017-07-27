@@ -10,7 +10,7 @@ type Resolver struct {
 
 // New return a Resolver intance
 func New(server string, t ...int) (*Resolver, error) {
-	timeout := 0
+	timeout := 2
 	if len(t) > 0 {
 		timeout = t[0]
 	}
