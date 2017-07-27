@@ -2,12 +2,9 @@ package resolver
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strings"
-	"time"
-
-	"github.com/miekg/dns"
+	"sync"
 )
 
 type Answer struct {
@@ -15,7 +12,7 @@ type Answer struct {
 	TTL       uint32
 }
 
-// Resolve return IPv4 ips
+// Resolve return a list of Addresses ipv4/ipv6
 func (r *Resolver) Resolve(host string) (*Answer, error) {
 	// if host is an IP don't, resolve and set TTL to 1 year
 	h := strings.Split(host, ":")[0]
@@ -27,47 +24,44 @@ func (r *Resolver) Resolve(host string) (*Answer, error) {
 		}, nil
 	}
 
-	// start DNS client
-	c := dns.Client{
-		Timeout: time.Duration(r.timeout) * time.Second,
+	ipv4 := &Answer{}
+	ipv6 := &Answer{}
+
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+
+	// ipv4
+	go func(host string) {
+		defer wg.Done()
+		ipv4 = r.IPv4(host)
+	}(h)
+
+	// ipv6
+	go func(host string) {
+		defer wg.Done()
+		ipv6 = r.IPv6(host)
+	}(h)
+
+	wg.Wait()
+
+	if ipv4 == nil && ipv6 == nil {
+		return nil, fmt.Errorf("Could not found IP\n")
 	}
-	m := dns.Msg{}
-	m.SetQuestion(fmt.Sprintf("%s.", host), dns.TypeA)
-	in, _, err := c.Exchange(&m, fmt.Sprintf("%s:53", r.server))
-	var exit bool
-	if err != nil {
-		exit = true
-		log.Printf("server %q not responding, trying with local servers.\n", r.server)
-		// if main nameserver not resolving try with local servers
-		for i := 0; i < len(r.localServers); i++ {
-			in, _, err = c.Exchange(&m, fmt.Sprintf("%s:53", r.localServers[i]))
-			if err == nil {
-				exit = false
-				break
-			}
+
+	ips := &Answer{}
+
+	if ipv4 != nil {
+		ips.Addresses = append(ips.Addresses, ipv4.Addresses...)
+		ips.TTL = ipv4.TTL
+	}
+
+	if ipv6 != nil {
+		ips.Addresses = append(ips.Addresses, ipv6.Addresses...)
+		if ips.TTL > ipv6.TTL {
+			ips.TTL = ipv6.TTL
 		}
-		if exit {
-			return nil, err
-		}
 	}
 
-	if len(in.Answer) == 0 {
-		return nil, fmt.Errorf("Could not found public IP\n")
-	}
-
-	dnsAnswer := Answer{}
-	for _, ans := range in.Answer {
-		if a, ok := ans.(*dns.A); ok {
-			dnsAnswer.Addresses = append(dnsAnswer.Addresses, a.A.String())
-			// get the average TTL
-			dnsAnswer.TTL = dnsAnswer.TTL + ans.Header().Ttl
-		}
-	}
-	dnsAnswer.TTL = dnsAnswer.TTL / uint32(len(dnsAnswer.Addresses))
-
-	if len(dnsAnswer.Addresses) == 0 {
-		return nil, fmt.Errorf("No addresses found\n")
-	}
-
-	return &dnsAnswer, nil
+	return ips, nil
 }
